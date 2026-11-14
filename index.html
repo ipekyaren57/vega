@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VEGA — Adaptive Astronaut Health Companion</title>
+<meta name="description" content="VEGA: a calm, adaptive health companion for long-duration astronauts — arm panel, EVA visor HUD, voice assistant and a delayed link to flight surgeons on Earth. NASA Space Apps Challenge 2026 prototype.">
+<meta name="author" content="İpek Yaren Değer">
+<!-- SI DISCLOSURE: The code of this prototype was written with the help of an AI model (Claude, by Anthropic).
+     Concept, interaction design and feature decisions (visor HUD, arm panel, voice assistant, adaptive low-stress
+     interface, link to Earth) are by İpek Yaren Değer. All health data shown is simulated. -->
+<meta name="si-generated" content="code: AI-assisted (Claude, Anthropic); concept and design: human (İpek Yaren Değer); data: simulated">
+<style>
+:root{
+  --bg:#060a13;--panel:#0d1422;--panel2:#111a2c;--line:#1e2a42;--text:#e7eef8;--muted:#8796af;
+  --ok:#4fd1b5;--warn:#e8b45a;--crit:#ff6f6f;--accent:#82a8ff;--glass:rgba(130,168,255,.08);
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer;border:1px solid var(--line);background:var(--panel2);border-radius:10px;padding:7px 12px}
+button:hover{border-color:var(--accent)}
+button.primary{background:var(--accent);color:#08101f;border-color:var(--accent);font-weight:600}
+button.ghost{background:transparent}
+.muted{color:var(--muted)}
+.small{font-size:12px}
+header{display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid var(--line);background:#080d18;position:sticky;top:0;z-index:20}
+.brand{display:flex;align-items:center;gap:10px;margin-right:auto}
+.logo{width:34px;height:34px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#cfe0ff,#82a8ff 40%,#2a3f7a 75%);box-shadow:0 0 18px rgba(130,168,255,.45)}
+.brand h1{font-size:18px;margin:0;letter-spacing:.14em}
+.brand p{margin:0;font-size:12px;color:var(--muted)}
+.seg{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{border:0;border-radius:0;background:transparent;padding:6px 10px}
+.seg button.on{background:var(--accent);color:#08101f;font-weight:600}
+.levelchip{padding:5px 11px;border-radius:999px;font-weight:600;font-size:12px;border:1px solid}
+.lv0{color:var(--ok);border-color:var(--ok)}.lv1{color:var(--warn);border-color:var(--warn)}.lv2{color:var(--crit);border-color:var(--crit)}
+.scen{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 18px;border-bottom:1px solid var(--line);background:#09101d}
+.scen b{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-right:4px}
+.scen button.on{border-color:var(--accent);background:rgba(130,168,255,.15)}
+main{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr) minmax(0,.9fr);gap:14px;padding:14px 18px 30px}
+@media (max-width:1150px){main{grid-template-columns:1fr 1fr}#mc{grid-column:1/-1}}
+@media (max-width:760px){main{grid-template-columns:1fr;padding:10px}header,.scen{padding:10px}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:14px;min-width:0}
+.ptitle{display:flex;align-items:center;gap:8px;margin:0 0 10px;font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted)}
+.ptitle .dot{width:8px;height:8px;border-radius:50%;background:var(--accent)}
+.ptitle .right{margin-left:auto;text-transform:none;letter-spacing:0}
+/* arm panel */
+#arm{border-radius:26px;background:linear-gradient(180deg,#0f1729,#0b1220);box-shadow:inset 0 0 0 4px #141e33}
+.banner{border-radius:14px;padding:10px 12px;margin-bottom:12px;display:none;gap:10px;align-items:flex-start}
+.banner.show{display:flex}
+.banner.b1{background:rgba(232,180,90,.1);border:1px solid rgba(232,180,90,.45)}
+.banner.b2{background:rgba(255,111,111,.12);border:1px solid rgba(255,111,111,.55)}
+.banner .txt{flex:1}
+.banner .acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.armgrid{display:grid;grid-template-columns:190px minmax(0,1fr);gap:12px}
+@media (max-width:520px){.armgrid{grid-template-columns:1fr}}
+.bodywrap{background:var(--panel2);border-radius:14px;padding:8px;text-align:center}
+.bodywrap svg{width:100%;max-width:180px;height:auto}
+.region{cursor:pointer;transition:fill .4s,opacity .3s;stroke:#0b1220;stroke-width:2}
+.region:hover{opacity:1!important;filter:brightness(1.25)}
+.region.sel{stroke:#fff;stroke-width:2.5}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:8px}
+.tile{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:8px 9px;cursor:pointer;transition:opacity .4s,border-color .3s}
+.tile:hover{border-color:var(--accent)}
+.tile.sel{border-color:var(--accent)}
+.tile .n{font-size:11px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.tile .v{font-size:19px;font-weight:650;margin:2px 0}
+.tile .v small{font-size:11px;color:var(--muted);font-weight:400}
+.sd{width:8px;height:8px;border-radius:50%;display:inline-block;flex:none}
+.s0{background:var(--ok)}.s1{background:var(--warn)}.s2{background:var(--crit)}
+.focus .tile.dim{opacity:.28}
+.focus .tile.dim:hover{opacity:.8}
+.detail{margin-top:12px;background:var(--panel2);border-radius:14px;padding:12px;border:1px solid var(--line)}
+.detail h3{margin:0 0 2px;font-size:16px}
+.detail .hz{font-size:11px;color:var(--accent);margin-bottom:8px}
+.detail dl{margin:8px 0 0;display:grid;grid-template-columns:110px 1fr;gap:6px 10px;font-size:13px}
+.detail dt{color:var(--muted)}
+.detail dd{margin:0}
+.chart{width:100%;height:auto;display:block;margin-top:6px}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.col{flex:1;min-width:220px}
+.box{background:var(--panel2);border:1px solid var(--line);border-radius:14px;padding:10px;margin-top:12px}
+.box h4{margin:0 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);display:flex;align-items:center;gap:8px}
+.task{display:flex;align-items:center;gap:8px;padding:5px 0;font-size:13px}
+.task input{accent-color:var(--ok);width:16px;height:16px}
+.task.done span{color:var(--muted);text-decoration:line-through}
+.ring{width:46px;height:46px}
+.logform{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.logform input,.logform select{background:#0a1120;border:1px solid var(--line);border-radius:8px;padding:6px 8px;min-width:0}
+.logform input{width:80px}
+.chat{max-height:190px;overflow:auto;display:flex;flex-direction:column;gap:6px;padding-right:4px}
+.msg{padding:7px 10px;border-radius:12px;max-width:88%;font-size:13px}
+.msg.vega{background:rgba(130,168,255,.12);align-self:flex-start}
+.msg.user{background:#1a2438;align-self:flex-end}
+.msg.ground{background:rgba(79,209,181,.12);align-self:flex-start}
+.msg b{font-size:11px;letter-spacing:.06em;display:block;color:var(--muted)}
+.voicebar{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.voicebar input{flex:1;min-width:140px;background:#0a1120;border:1px solid var(--line);border-radius:10px;padding:7px 10px}
+.mic.on{background:var(--crit);border-color:var(--crit);color:#fff}
+.wake.on{border-color:var(--ok);color:var(--ok)}
+.share li{margin:3px 0}
+.share{margin:0;padding-left:18px;font-size:12.5px}
+/* visor */
+.visor{position:relative;aspect-ratio:4/3.3;border-radius:48% 48% 40% 40%/42% 42% 30% 30%;overflow:hidden;background:#02040a;border:6px solid #2b354a;box-shadow:0 0 0 2px #0a0f1a,inset 0 0 60px rgba(0,0,0,.9)}
+.sky{position:absolute;inset:0;background:
+  radial-gradient(1px 1px at 12% 18%,#fff,transparent),radial-gradient(1px 1px at 33% 9%,#cfd8ff,transparent),
+  radial-gradient(1.5px 1.5px at 72% 22%,#fff,transparent),radial-gradient(1px 1px at 88% 40%,#fff,transparent),
+  radial-gradient(1px 1px at 52% 30%,#dfe6ff,transparent),radial-gradient(1px 1px at 20% 45%,#fff,transparent),
+  radial-gradient(1px 1px at 64% 12%,#fff,transparent),radial-gradient(1px 1px at 8% 60%,#cfd8ff,transparent),#02040a}
+.planet{position:absolute;left:-25%;right:-25%;bottom:-118%;height:160%;border-radius:50%;transition:background 1s}
+.planet.earth{background:radial-gradient(circle at 50% 10%,#5fa8ff 0,#1d5fb8 18%,#0c2e66 35%,#071a3d 60%);box-shadow:0 -6px 40px rgba(95,168,255,.55)}
+.planet.moon{background:radial-gradient(circle at 50% 8%,#b9b9b4 0,#8a8a86 20%,#555552 45%,#2b2b2a 70%);box-shadow:0 -4px 24px rgba(200,200,200,.18)}
+.planet.mars{background:radial-gradient(circle at 50% 10%,#e08a5a 0,#b3542c 20%,#6e2d14 45%,#3a170a 70%);box-shadow:0 -6px 34px rgba(224,138,90,.35)}
+.truss{position:absolute;left:0;top:0;width:100%;height:100%;opacity:.55}
+.glass{position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.07),transparent 35%,transparent 70%,rgba(130,168,255,.06));pointer-events:none}
+.hud{position:absolute;inset:0;padding:9% 10%;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:#bfe9ff;text-shadow:0 0 6px rgba(120,200,255,.6)}
+.hud .tl,.hud .tr{position:absolute;top:17%;font-size:12px;line-height:1.5;transition:opacity .5s}
+.hud .tl{left:17%}.hud .tr{right:17%;text-align:right}
+.hud .big{font-size:20px;font-weight:700}
+.hud .lbl{font-size:10px;opacity:.75;letter-spacing:.1em}
+.hud .center{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);width:70%;text-align:center;transition:opacity .4s}
+.hcard{border-radius:12px;padding:10px 12px;backdrop-filter:blur(2px)}
+.hcard.c1{border:1px solid rgba(232,180,90,.8);color:#ffe3b0;background:rgba(40,28,8,.45);text-shadow:none}
+.hcard.c2{border:2px solid rgba(255,111,111,.9);color:#ffd6d6;background:rgba(50,8,8,.55);text-shadow:none;animation:breathe 3s ease-in-out infinite}
+@keyframes breathe{0%,100%{box-shadow:0 0 0 rgba(255,111,111,0)}50%{box-shadow:0 0 22px rgba(255,111,111,.55)}}
+.hcard .t{font-weight:700;font-size:14px;letter-spacing:.06em}
+.hcard .s{font-size:12px;margin-top:3px;font-family:system-ui,sans-serif}
+.hud .cap{position:absolute;left:12%;right:12%;bottom:13%;text-align:center;font-size:12px;font-family:system-ui,sans-serif;color:#dbe8ff;opacity:0;transition:opacity .5s}
+.hud .cap.show{opacity:1}
+.hud .reticle{position:absolute;left:50%;top:44%;width:26px;height:26px;margin:-13px;border:1px solid rgba(190,233,255,.35);border-radius:50%;transition:opacity .4s}
+.visor-off{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:10px;background:rgba(2,4,10,.72);padding:20px}
+.legend3{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:10px;font-size:11.5px}
+.legend3 div{background:var(--panel2);border-radius:10px;padding:7px;border:1px solid var(--line)}
+.legend3 b{display:block;font-size:12px}
+/* mission control */
+#mc{background:#0a1210;border-color:#16302a}
+#mc .ptitle .dot{background:var(--ok)}
+.link{display:flex;align-items:center;gap:8px;font-size:12px;background:#0d1a17;border:1px solid #16302a;border-radius:10px;padding:8px 10px}
+.wave{flex:1;height:6px;border-radius:3px;background:#12241f;position:relative;overflow:hidden}
+.pkt{position:absolute;top:0;width:14px;height:6px;border-radius:3px;background:var(--ok);box-shadow:0 0 8px var(--ok)}
+.pkt.p2{background:var(--crit);box-shadow:0 0 8px var(--crit)}
+table.tel{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:10px;font-family:ui-monospace,Menlo,monospace}
+table.tel td{padding:4px 6px;border-bottom:1px solid #15261f}
+table.tel td:last-child{text-align:right}
+.mclog{margin-top:10px;max-height:300px;overflow:auto;font-size:12px;display:flex;flex-direction:column;gap:5px}
+.mclog div{padding:6px 8px;border-radius:8px;background:#0d1a17;border-left:3px solid var(--ok)}
+.mclog div.l1{border-left-color:var(--warn)}.mclog div.l2{border-left-color:var(--crit);background:#1d0f10}
+footer{padding:16px 18px 30px;color:var(--muted);font-size:12px;border-top:1px solid var(--line);line-height:1.6}
+footer a{color:var(--accent)}
+.hidden{display:none!important}
+
+/* v2 layout from sketch: arm + visor side by side, Earth as a narrow strip */
+main{grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) 250px!important}
+@media (max-width:1150px){main{grid-template-columns:1fr 1fr!important}#mc{grid-column:1/-1}}
+@media (max-width:760px){main{grid-template-columns:1fr!important}}
+#arm{border-radius:18px;background:var(--panel);box-shadow:none}
+.sleeve{border-radius:46px;padding:22px 20px;background:
+  repeating-linear-gradient(90deg,rgba(0,0,0,.025) 0 2px,transparent 2px 6px),
+  linear-gradient(180deg,#a9b0ba 0%,#e9ecf0 22%,#f4f6f8 45%,#dde1e6 75%,#9ea5af 100%);
+  box-shadow:inset 0 -10px 18px rgba(0,0,0,.18),0 18px 40px rgba(0,0,0,.45)}
+.band{position:relative;border-radius:26px/34px;overflow:hidden;background:#0b1220;
+  box-shadow:0 0 0 3px #2a3448,0 0 0 6px #c5cbd3,inset 0 1px 0 rgba(255,255,255,.05)}
+.band::after{content:"";position:absolute;inset:0;pointer-events:none;border-radius:inherit;
+  background:linear-gradient(90deg,rgba(0,0,0,.55),transparent 9%,transparent 91%,rgba(0,0,0,.55)),
+  linear-gradient(180deg,rgba(255,255,255,.06),transparent 30%)}
+.rim{display:flex;align-items:center;gap:10px;padding:9px 18px;background:#121c31;border-bottom:1px solid #22304b;min-height:42px;transition:background .5s}
+.rim.r1{background:#2a2312}.rim.r2{background:#3a1416}
+.rimtext{font-weight:600;font-size:13.5px;flex:1;min-width:0}
+.rimacts{display:flex;gap:6px;flex-wrap:wrap}
+.rimacts button{padding:4px 10px;font-size:12px;border-radius:8px}
+.screen{display:grid;grid-template-columns:34% 1fr;gap:6px;padding:12px 18px 14px;min-height:230px}
+.bodyside{display:flex;align-items:center;justify-content:center}
+.bodyside svg{width:100%;max-width:130px;height:auto}
+.rows{display:flex;flex-direction:column;justify-content:center}
+.rowi{display:grid;grid-template-columns:10px minmax(0,1fr) auto;grid-template-rows:auto auto;column-gap:10px;align-items:center;padding:9px 8px;border-radius:12px;cursor:pointer;transition:background .2s}
+.rowi:hover{background:rgba(130,168,255,.07)}
+.rowi+.rowi{border-top:1px solid #1a2540}
+.rowi .nm{font-size:12px;color:var(--muted)}
+.rowi .vv{font-size:24px;font-weight:650;text-align:right;grid-row:1/3;grid-column:3}
+.rowi .vv small{font-size:12px;color:var(--muted);font-weight:400}
+.rowi .sub{font-size:11.5px;grid-column:2}
+.rowi .sd{grid-row:1/3}
+.rows.all .rowi{padding:5px 8px}.rows.all .vv{font-size:17px}
+.tabs{display:flex;gap:6px;margin-top:14px;border-bottom:1px solid var(--line);padding-bottom:8px}
+.tabs button{background:transparent;border-color:transparent}
+.tabs button.on{border-color:var(--accent);background:rgba(130,168,255,.12)}
+.tabpane{padding-top:10px}
+.chat{max-height:170px}
+#mc .tel td{padding:4px 2px}
+.mclog{max-height:220px}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <div class="logo" aria-hidden="true"></div>
+    <div><h1>VEGA</h1><p>Adaptive health companion for long-duration astronauts</p></div>
+  </div>
+  <div class="seg" id="envSeg" title="Mission environment">
+    <button data-env="iss" class="on">ISS</button><button data-env="moon">Moon base</button><button data-env="mars">Mars transit</button>
+  </div>
+  <div class="seg" id="modeSeg" title="Crew activity">
+    <button data-mode="habitat" class="on">Habitat</button><button data-mode="eva">EVA</button>
+  </div>
+  <span class="levelchip lv0" id="levelChip">● All nominal</span>
+</header>
+
+<div class="scen" id="scenBar">
+  <b>Demo scenarios</b>
+  <button data-s="nominal" class="on">1 · Normal day</button>
+  <button data-s="isolation">2 · Isolation week (sleep &amp; mood)</button>
+  <button data-s="evawork">3 · EVA: heavy workload</button>
+  <button data-s="evacrit">4 · EVA: heart rhythm event</button>
+  <span class="muted small" style="margin-left:auto">Simulated data · prototype, not a medical device</span>
+</div>
+
+<main>
+  <!-- ARM DEVICE -->
+  <section class="panel" id="arm">
+    <div class="ptitle"><span class="dot"></span>Arm display · suit forearm <span class="right small" id="armClock"></span></div>
+    <div class="sleeve">
+      <div class="band">
+        <div class="rim" id="rim">
+          <span class="sd s0" id="rimDot"></span>
+          <span id="rimText" class="rimtext"></span>
+          <span class="rimacts" id="rimActs"></span>
+        </div>
+        <div class="screen">
+          <div class="bodyside">
+            <svg viewBox="0 0 220 400" id="bodySvg" role="img" aria-label="Clickable body map">
+          <rect x="100" y="80" width="20" height="16" rx="5" fill="#1b263c"/>
+          <rect x="70" y="92" width="80" height="132" rx="24" fill="#1b263c"/>
+          <rect class="region" data-r="immune" x="42" y="98" width="22" height="122" rx="11"><title>Skin &amp; immune system</title></rect>
+          <rect class="region" data-r="immune" x="156" y="98" width="22" height="122" rx="11"><title>Skin &amp; immune system</title></rect>
+          <rect class="region" data-r="bones" x="80" y="224" width="26" height="152" rx="13"><title>Bones &amp; muscle</title></rect>
+          <rect class="region" data-r="bones" x="114" y="224" width="26" height="152" rx="13"><title>Bones &amp; muscle</title></rect>
+          <circle class="region" data-r="brain" cx="110" cy="50" r="31"><title>Brain &amp; behavioral health</title></circle>
+          <ellipse class="region" data-r="eyes" cx="110" cy="52" rx="19" ry="7"><title>Eyes (vision)</title></ellipse>
+          <ellipse class="region" data-r="lungs" cx="92" cy="128" rx="15" ry="25"><title>Lungs &amp; breathing</title></ellipse>
+          <ellipse class="region" data-r="lungs" cx="128" cy="128" rx="15" ry="25"><title>Lungs &amp; breathing</title></ellipse>
+          <circle class="region" data-r="heart" cx="116" cy="138" r="12"><title>Heart &amp; circulation</title></circle>
+          <ellipse class="region" data-r="metab" cx="110" cy="190" rx="27" ry="19"><title>Metabolism</title></ellipse>
+        </svg>
+          </div>
+          <div class="rows" id="rows"></div>
+        </div>
+      </div>
+    </div>
+    <div class="small muted" style="text-align:center;margin-top:6px">Tap a body part or a row for details · VEGA picks the 3 most relevant values</div>
+
+    <div class="tabs" id="tabs">
+      <button data-tab="vega" class="on">🎧 VEGA</button>
+      <button data-tab="detail">Details</button>
+      <button data-tab="routine">Routine &amp; log</button>
+    </div>
+    <div class="tabpane" data-pane="vega">
+      <div class="chat" id="chat"></div>
+      <div class="voicebar">
+        <input id="chatIn" placeholder="Type: “Vega, how is my heart?”">
+        <button id="chatSend">Send</button>
+      </div>
+      <div class="voicebar">
+        <button class="mic" id="micBtn" title="Push to talk">🎙 Talk</button>
+        <button class="wake" id="wakeBtn" title="Always listen for the word 'Vega'">“Vega…” off</button>
+        <button id="muteBtn" title="Spoken replies">🔊</button>
+        <select id="voiceSel" title="VEGA's voice" style="flex:1;min-width:0;background:#0a1120;border:1px solid var(--line);border-radius:10px;padding:6px 8px"></select>
+        <button id="voiceTest" title="Preview voice">▶</button>
+      </div>
+      <div class="small muted" style="margin-top:8px">Shared with Earth: vital-sign summaries and mood <b>score only</b>. Voice is processed on board and never recorded.</div>
+    </div>
+    <div class="tabpane hidden" data-pane="detail"><div class="detail" id="detail"></div></div>
+    <div class="tabpane hidden" data-pane="routine">
+      <div class="box" style="margin-top:0">
+        <h4>Today's health routine <span id="streak" style="margin-left:auto;text-transform:none;letter-spacing:0;color:var(--ok)"></span></h4>
+        <div id="tasks"></div>
+        <div style="margin-top:8px" class="logform">
+          <select id="logInd"></select>
+          <input id="logVal" placeholder="value" inputmode="decimal">
+          <input id="logVal2" placeholder="dia" inputmode="decimal" class="hidden">
+          <button class="primary" id="logBtn">Log</button>
+        </div>
+        <div class="small muted" id="logHint" style="margin-top:4px"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- VISOR -->
+  <section class="panel">
+    <div class="ptitle"><span class="dot" style="background:#bfe9ff"></span>Helmet visor <span class="right small" id="visorMode"></span></div>
+    <div class="visor" id="visor">
+      <div class="sky"></div>
+      <div class="planet earth" id="planet"></div>
+      <svg class="truss" viewBox="0 0 400 330" preserveAspectRatio="none" aria-hidden="true">
+        <g stroke="#9fb0c8" stroke-width="2" fill="none">
+          <path d="M-10 250 L410 170 M-10 280 L410 200"/>
+          <path d="M20 245 L50 271 M80 234 L110 260 M140 222 L170 249 M200 211 L230 237 M260 199 L290 226 M320 188 L350 214 M380 177 L405 199"/>
+          <path d="M50 271 L80 234 M110 260 L140 222 M170 249 L200 211 M230 237 L260 199 M290 226 L320 188 M350 214 L380 177"/>
+        </g>
+      </svg>
+      <div class="glass"></div>
+      <div class="hud" id="hud">
+        <div class="tl" id="hudTL"></div>
+        <div class="tr" id="hudTR"></div>
+        <div class="reticle" id="reticle"></div>
+        <div class="center" id="hudCenter"></div>
+        <div class="cap" id="hudCap"></div>
+      </div>
+      <div class="visor-off" id="visorOff">
+        <div style="font-size:15px;font-weight:600">Visor HUD is idle inside the habitat</div>
+        <div class="small muted">During a spacewalk, only what matters right now appears in the visor. Details stay on the arm panel.</div>
+        <button class="primary" id="startEva">Start EVA</button>
+      </div>
+    </div>
+    
+  </section>
+
+  <!-- MISSION CONTROL STRIP -->
+  <section class="panel" id="mc">
+    <div class="ptitle"><span class="dot"></span>Earth · flight surgeon</div>
+    <div class="link"><span>🛰</span><div class="wave" id="wave"></div><span>🌍</span></div>
+    <div class="small muted" style="margin-top:6px" id="linkTxt"></div>
+    <table class="tel" id="tel"></table>
+    <button class="ghost small" id="telMore" style="margin-top:6px;width:100%">Full telemetry ▾</button>
+    <div class="small muted" id="telAge" style="margin-top:4px"></div>
+    <button id="sendReport" style="margin-top:8px;width:100%">📡 Send report</button>
+    <div class="mclog" id="mclog"></div>
+  </section>
+</main>
+
+<footer>
+  <b>About this prototype.</b> VEGA is a NASA Space Apps Challenge 2026 concept for the astronaut health self-assessment challenge. All health values are <b>simulated</b>; thresholds are illustrative and this is not a medical device.<br>
+  <b>NASA resources.</b> Indicator choice and the “hazard” tags on every body region follow NASA's Human Research Program and its five hazards of human spaceflight (space radiation, isolation &amp; confinement, distance from Earth, gravity fields, hostile closed environments): <a href="https://www.nasa.gov/hrp/hazards" target="_blank" rel="noopener">nasa.gov/hrp/hazards</a>. Communication delays per environment are based on HRP's “distance from Earth” hazard (Mars: up to ~20 min one way; compressed in this demo).<br>
+  <b>SI disclosure.</b> The code of this prototype was written with the help of an AI model (Claude, Anthropic). The concept and interaction design — visor HUD, arm panel, voice assistant VEGA, adaptive low-stress interface and the link to Earth — are by the team. Voice uses the browser's built-in Web Speech API (works best in Chrome).
+</footer>
+
+<script>
+"use strict";
+/* ---------- configuration ---------- */
+const ENVS={
+  iss:{name:"ISS · low Earth orbit",delay:0.5,label:"< 1 s one way",planet:"earth"},
+  moon:{name:"Lunar surface base",delay:1.3,label:"≈ 1.3 s one way",planet:"moon"},
+  mars:{name:"Mars transit",delay:8,label:"up to ~20 min one way (demo: compressed to 8 s)",planet:"mars"}
+};
+const IND={
+  hr:{name:"Heart rate",unit:"bpm",dec:0,band:()=>S.mode==="eva"?[60,130]:[50,90],
+    status:v=>{ if(S.eva.irregular) return 2; if(S.mode==="eva") return v>150?2:v>130?1:0; return (v>110||v<40)?2:(v>90||v<50)?1:0;},
+    why:"Floating fluids and less work against gravity can decondition the heart over months; stress and poor sleep raise resting rate.",
+    how:"Suit/chest biosensor reads it continuously. Manual: count your pulse for 60 s at rest, morning.",
+    when:"Resting >100 or <45 bpm two days in a row, or any irregular rhythm, goes to flight surgeons.",
+    act:"Keep daily aerobic exercise, hydrate, rest if it is high together with fatigue."},
+  bp:{name:"Blood pressure",unit:"mmHg",dec:0,band:()=>[90,130],
+    status:()=>{const s=S.v.sys,d=S.v.dia; if(s>=160||d>=100||s<85) return 2; if(s>=130||d>=85||s<95) return 1; return 0;},
+    why:"In weightlessness blood shifts toward the head and blood volume drops. Back in gravity (Moon, Mars, Earth) this can cause dizziness on standing.",
+    how:"Upper-arm cuff, seated and strapped in, arm at heart level, after 5 min rest.",
+    when:"≥160/100, or systolic under 90 with dizziness.",
+    act:"Fluid & salt loading before gravity transitions, regular exercise."},
+  glu:{name:"Blood sugar",unit:"mg/dL",dec:0,band:()=>[70,140],
+    status:v=>(v<54||v>=200)?2:(v<70||v>140)?1:0,
+    why:"Stress hormones, less physical activity and a limited food system can change how the body handles sugar.",
+    how:"Finger-prick glucometer, fasting in the morning or 2 h after a meal.",
+    when:"Below 54 or at/above 200 mg/dL.",
+    act:"Low: 15 g fast carbs, recheck in 15 min. High: hydrate, log the meal, recheck."},
+  temp:{name:"Body temp.",unit:"°C",dec:1,band:()=>[36,37.5],
+    status:v=>(v>=38.5||v<35.5)?2:(v>37.5||v<36)?1:0,
+    why:"A closed environment and spaceflight-related immune changes make infections easier to catch and spread among crew.",
+    how:"Ear/forehead thermometer, or the suit's core temperature sensor.",
+    when:"≥38.5 °C, or any fever lasting over 24 h.",
+    act:"Rest, fluids, keep shared items separate, report to the crew medical officer."},
+  sleep:{name:"Sleep",unit:"h",dec:1,band:()=>[6.5,9],
+    status:v=>v<5?2:v<6.5?1:0, cap:1,
+    why:"Isolation, workload, noise and ~16 sunrises a day in low Earth orbit disrupt the body clock.",
+    how:"Wrist actigraphy logs it automatically; confirm hours at the morning check-in.",
+    when:"Under 5 h for 3+ nights.",
+    act:"Shift the lighting schedule, wind-down routine, ask ground to move demanding tasks."},
+  mood:{name:"Mood",unit:"/5",dec:0,band:()=>[4,5],
+    status:v=>v<=2?2:v<4?1:0, cap:1,
+    why:"Isolation, confinement and distance from home are core spaceflight hazards for behavioral health.",
+    how:"Tell VEGA how you feel (1–5) at the morning check-in. Only the score is shared.",
+    when:"Low mood several days in a row: VEGA offers, never forces, a private conference with a flight surgeon or psychologist.",
+    act:"Exercise, a call home, crew time, something you enjoy."},
+  spo2:{name:"Blood oxygen",unit:"%",dec:0,band:()=>[95,100],
+    status:v=>v<90?2:v<95?1:0,
+    why:"Cabin air quality (e.g. CO₂ build-up) and suit oxygen supply affect how well blood carries oxygen.",
+    how:"Finger pulse oximeter, or the suit sensor during EVA.",
+    when:"Below 90 %.",
+    act:"Check suit/cabin air, slow your breathing, rest."},
+  ex:{name:"Exercise",unit:"min",dec:0,band:()=>[120,180],
+    status:v=>v<60?2:v<120?1:0, cap:1,
+    why:"Without loading, weight-bearing bones can lose around 1–1.5 % of their mineral density per month; muscles shrink too.",
+    how:"Logged automatically from the treadmill, bike and resistance device.",
+    when:"Repeatedly under 60 min/day.",
+    act:"About 2 h/day of resistance + aerobic exercise is the main countermeasure."}
+};
+const REGIONS={
+  brain:{name:"Brain & behavioral health",inds:["mood","sleep"],hz:"Isolation & confinement · Distance from Earth",
+    txt:"Your sleep and mood tell VEGA how you are coping with a long mission."},
+  eyes:{name:"Eyes",inds:[],hz:"Gravity fields",
+    txt:"Fluids shift toward the head in weightlessness. Some long-duration astronauts develop changes in near vision (Spaceflight-Associated Neuro-ocular Syndrome).",
+    extra:"Weekly near-vision card check · last result: <b>no change</b>. Onboard eye imaging is guided by ground."},
+  heart:{name:"Heart & circulation",inds:["hr","bp"],hz:"Gravity fields · Space radiation",txt:"The heart works differently without gravity, and adapts back slowly."},
+  lungs:{name:"Lungs & breathing",inds:["spo2"],hz:"Hostile closed environment",txt:"Air in a spacecraft or suit is recycled; small problems in it show up in your blood oxygen."},
+  metab:{name:"Metabolism & nutrition",inds:["glu"],hz:"Hostile closed environment",txt:"Diet, stress and activity all shape blood sugar on a long mission."},
+  bones:{name:"Bones & muscle",inds:["ex"],hz:"Gravity fields",txt:"Bones and muscles need load. Exercise minutes are the best daily indicator you control."},
+  immune:{name:"Skin & immune system",inds:["temp"],hz:"Space radiation · Hostile closed environment",txt:"Stress and spaceflight can weaken immune defenses; temperature is the quickest signal."}
+};
+const COLORS=["#4fd1b5","#e8b45a","#ff6f6f"];
+
+/* ---------- state ---------- */
+const S={env:"iss",mode:"habitat",scen:"nominal",showAll:false,voice:true,sel:"heart",selInd:"hr",level:0,
+  v:{},h:{},live:[],
+  eva:{t:0,o2:360,planned:240,burn:1,targetHr:108,irregular:false,running:false},
+  tasks:{checkin:false,bp:false,glu:false,ex:false,vision:true},streak:11,
+  received:null,receivedAt:0,inTransit:[]};
+
+const BASE={hr:[64,66,63,67,65,64,66],sys:[116,118,115,119,117,116,118],dia:[75,76,74,77,76,75,76],
+  glu:[94,98,92,97,95,93,96],temp:[36.6,36.7,36.6,36.8,36.7,36.6,36.7],sleep:[7.3,7.0,7.4,6.9,7.2,7.1,7.2],
+  mood:[4,4,5,4,4,4,4],spo2:[98,98,97,98,98,98,98],ex:[130,125,140,120,135,130,128]};
+
+function loadBase(){
+  S.h=JSON.parse(JSON.stringify(BASE));
+  for(const k in S.h) S.v[k]=S.h[k][S.h[k].length-1];
+}
+
+/* ---------- helpers ---------- */
+const $=id=>document.getElementById(id);
+const fmt=(k,v)=>k==="bp"?`${Math.round(S.v.sys)}/${Math.round(S.v.dia)}`:Number(v).toFixed(IND[k].dec);
+function stat(k){const c=IND[k];let s=c.status(k==="bp"?null:S.v[k]);if(c.cap!=null)s=Math.min(s,c.cap);return s;}
+function o2Margin(){return Math.round(S.eva.o2/S.eva.burn - S.eva.planned);}
+function o2Status(){const m=o2Margin();return m<15?2:m<45?1:0;}
+function evaInds(){return ["hr","spo2"];}
+function activeInds(){return S.mode==="eva"?["hr","spo2"]:Object.keys(IND);}
+function computeLevel(){
+  let lv=0;const why=[];
+  for(const k of activeInds()){const s=stat(k);if(s>0)why.push([k,s]);lv=Math.max(lv,s);}
+  if(S.mode==="eva"){const s=o2Status();if(s>0)why.push(["o2",s]);lv=Math.max(lv,s);}
+  return {lv,why};
+}
+function clock(){const d=new Date();return d.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"});}
+
+/* ---------- charts ---------- */
+function chart(arr,band,w,h,color,opts={}){
+  if(!arr.length) return "";
+  const lo=Math.min(...arr,band[0])*0.97,hi=Math.max(...arr,band[1])*1.03||1;
+  const X=i=>arr.length===1?w/2:(i/(arr.length-1))*(w-8)+4;
+  const Y=v=>h-4-((v-lo)/(hi-lo||1))*(h-8);
+  const pts=arr.map((v,i)=>`${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join(" ");
+  const by1=Y(band[1]),by0=Y(band[0]);
+  let s=`<svg class="chart" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">`;
+  s+=`<rect x="0" y="${Math.min(by1,by0)}" width="${w}" height="${Math.abs(by0-by1)}" fill="rgba(79,209,181,.08)"/>`;
+  s+=`<polyline points="${pts}" fill="none" stroke="${color}" stroke-width="${opts.sw||1.8}" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
+  const lx=X(arr.length-1),ly=Y(arr[arr.length-1]);
+  s+=`<circle cx="${lx}" cy="${ly}" r="${opts.r||2.6}" fill="${color}"/>`;
+  return s+"</svg>";
+}
+function series(k){
+  if(S.mode==="eva"&&k==="hr"&&S.live.length>1) return S.live;
+  return k==="bp"?S.h.sys:S.h[k];
+}
+
+/* ---------- trend prediction ---------- */
+function slope(a){const n=a.length;if(n<3)return 0;const m=(n-1)/2;let num=0,den=0;a.forEach((v,i)=>{num+=(i-m)*(v-a.reduce((x,y)=>x+y,0)/n);den+=(i-m)**2});return num/den;}
+function prediction(k){
+  if(S.mode==="eva"&&k==="hr"){
+    const m=o2Margin();
+    if(S.eva.irregular) return "Irregular rhythm detected. Hold position; ground is reviewing your ECG.";
+    if(S.v.hr>125) return `At this workload your oxygen reserve margin is ${m} min. Slowing your pace by ~20 % brings it back above 60 min.`;
+    return `Workload steady. Oxygen reserve margin: ${m} min.`;
+  }
+  const a=series(k);const sl=slope(a.slice(-5));const v=a[a.length-1];const band=IND[k].band();
+  if(Math.abs(sl)<(band[1]-band[0])*0.02) return "Trend: stable over the last 5 days.";
+  const dir=sl>0?"rising":"falling";
+  const target=sl>0?band[1]:band[0];
+  if((sl>0&&v<target)||(sl<0&&v>target)){
+    const d=Math.ceil(Math.abs((target-v)/sl));
+    return `Trend: ${dir}. At this rate it leaves the normal range in about ${d} day${d>1?"s":""} — a good moment to act early.`;
+  }
+  return `Trend: ${dir} (${sl>0?"+":""}${sl.toFixed(1)} ${IND[k].unit}/day).`;
+}
+
+/* ---------- rendering ---------- */
+const PRIO=["hr","sleep","mood","bp","spo2","glu","temp","ex"];
+function topKeys(){
+  if(S.mode==="eva"){const k=["o2","hr","spo2"];return k.sort((x,y)=>(y==="o2"?o2Status():stat(y))-(x==="o2"?o2Status():stat(x)));}
+  if(S.showAll) return PRIO.slice();
+  const bad=PRIO.filter(k=>stat(k)>0).sort((x,y)=>stat(y)-stat(x));
+  const out=bad.slice(0,3);
+  for(const k of ["hr","sleep","bp"]) if(out.length<3&&!out.includes(k)) out.push(k);
+  return out;
+}
+function renderTiles(lvInfo){
+  const keys=topKeys();let html="";
+  for(const k of keys){
+    if(k==="o2"){const s=o2Status();
+      html+=`<div class="rowi" data-k="o2"><span class="sd s${s}"></span><div class="nm">Suit O₂ reserve</div><div class="vv">${Math.round(S.eva.o2)}<small> min</small></div><div class="sub" style="color:${COLORS[s]}">margin ${o2Margin()} min</div></div>`;continue;}
+    const s=stat(k);
+    const sub=S.showAll&&S.mode!=="eva"?"":`${chart(series(k).slice(-30),IND[k].band(),110,18,COLORS[s],{sw:1.3,r:1.8})}`;
+    html+=`<div class="rowi" data-k="${k}"><span class="sd s${s}"></span><div class="nm">${IND[k].name}</div><div class="vv">${fmt(k,S.v[k])}<small> ${IND[k].unit}</small></div><div class="sub">${sub}</div></div>`;
+  }
+  $("rows").innerHTML=html;$("rows").classList.toggle("all",S.showAll&&S.mode!=="eva");
+  $("rows").querySelectorAll(".rowi").forEach(t=>t.onclick=()=>{const k=t.dataset.k;S.selInd=k==="o2"?"hr":k;S.sel=regionOf(S.selInd);openTab("detail");render();});
+}
+function openTab(t){document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("on",b.dataset.tab===t));document.querySelectorAll(".tabpane").forEach(p=>p.classList.toggle("hidden",p.dataset.pane!==t));}
+function regionOf(k){for(const r in REGIONS)if(REGIONS[r].inds.includes(k))return r;return S.sel;}
+function regionStatus(r){const R=REGIONS[r];let s=0;for(const k of R.inds){if(activeInds().includes(k)||S.mode!=="eva")s=Math.max(s,stat(k));}return s;}
+function renderBody(){
+  document.querySelectorAll(".region").forEach(el=>{
+    const r=el.dataset.r,s=regionStatus(r);
+    el.setAttribute("fill",COLORS[s]);
+    el.style.opacity=r==="brain"?.35:(r==="lungs"?.45:.75);
+    el.classList.toggle("sel",S.sel===r);
+    el.onclick=()=>{S.sel=r;S.selInd=REGIONS[r].inds[0]||null;openTab("detail");render();};
+  });
+}
+function renderDetail(){
+  const R=REGIONS[S.sel];let h=`<h3>${R.name}</h3><div class="hz">NASA HRP hazard: ${R.hz}</div><div class="small">${R.txt}</div>`;
+  if(R.extra) h+=`<div class="small" style="margin-top:8px">${R.extra}</div>`;
+  if(R.inds.length>1) h+=`<div style="margin-top:8px;display:flex;gap:6px">${R.inds.map(k=>`<button class="small${S.selInd===k?" primary":" ghost"}" data-ind="${k}">${IND[k].name}</button>`).join("")}</div>`;
+  const k=S.selInd&&R.inds.includes(S.selInd)?S.selInd:R.inds[0];
+  if(k){
+    const c=IND[k],s=stat(k);
+    h+=`<div style="display:flex;align-items:baseline;gap:8px;margin-top:10px"><span class="sd s${s}"></span><b style="font-size:18px">${fmt(k,S.v[k])} ${c.unit}</b><span class="small muted">${S.mode==="eva"&&k==="hr"?"live · last minutes of EVA":"last 7 days"} · <span style="color:#5f8f84">shaded = normal range</span></span></div>`;
+    h+=chart(series(k).slice(-60),c.band(),300,70,COLORS[s],{labels:true});
+    h+=`<div class="small" style="margin-top:6px;color:${COLORS[s]}">${prediction(k)}</div>`;
+    h+=`<dl><dt>Why in space</dt><dd>${c.why}</dd><dt>How to measure</dt><dd>${c.how}</dd><dt>Tell Earth when</dt><dd>${c.when}</dd><dt>What helps</dt><dd>${c.act}</dd></dl>`;
+  }
+  $("detail").innerHTML=h;
+  $("detail").querySelectorAll("[data-ind]").forEach(b=>b.onclick=()=>{S.selInd=b.dataset.ind;render();});
+}
+function renderTasks(){
+  const T=[["checkin","Morning check-in with VEGA (sleep + mood)"],["bp","Measure blood pressure"],["glu","Fasting blood sugar"],["ex","Exercise ~2 h (bone & muscle)"],["vision","Weekly vision check"]];
+  $("tasks").innerHTML=T.map(([k,t])=>`<label class="task${S.tasks[k]?" done":""}"><input type="checkbox" data-t="${k}" ${S.tasks[k]?"checked":""}><span>${t}</span></label>`).join("");
+  $("tasks").querySelectorAll("input").forEach(i=>i.onchange=()=>{S.tasks[i.dataset.t]=i.checked;if(i.dataset.t==="ex"&&i.checked){S.v.ex=125;S.h.ex[S.h.ex.length-1]=125;}render();});
+  const done=Object.values(S.tasks).filter(Boolean).length,tot=Object.keys(S.tasks).length;
+  const p=done/tot,C=2*Math.PI*18;
+  $("streak").innerHTML=`<svg class="ring" viewBox="0 0 46 46" style="vertical-align:middle;width:30px;height:30px"><circle cx="23" cy="23" r="18" stroke="#1e2a42" stroke-width="5" fill="none"/><circle cx="23" cy="23" r="18" stroke="#4fd1b5" stroke-width="5" fill="none" stroke-dasharray="${C*p} ${C}" transform="rotate(-90 23 23)" stroke-linecap="round"/></svg> ${done}/${tot} · 🔥 ${S.streak + (done===tot?1:0)}-day streak`;
+}
+function renderVisor(lvInfo){
+  const eva=S.mode==="eva";
+  $("visorOff").classList.toggle("hidden",eva);
+  $("planet").className="planet "+ENVS[S.env].planet;
+  $("visorMode").textContent=eva?"EVA active":"idle";
+  if(!eva){$("hudTL").innerHTML="";$("hudTR").innerHTML="";$("hudCenter").innerHTML="";return;}
+  const lv=S.level,full=S.showAll||lv===0;
+  const t=S.eva.t,mm=String(Math.floor(t/60)).padStart(1,"0"),ss=String(t%60).padStart(2,"0");
+  $("hudTL").innerHTML=lv===2&&!S.showAll?"":`<div class="lbl">O₂ RESERVE</div><div class="big" style="color:${COLORS[o2Status()]}">${Math.round(S.eva.o2)} min</div>`+
+    (full?`<div class="lbl" style="margin-top:6px">SUIT PRESSURE</div><div>4.3 psi</div>`:"");
+  $("hudTR").innerHTML=lv===2&&!S.showAll?`<div class="lbl">HEART</div><div class="big" style="color:${COLORS[2]}">${Math.round(S.v.hr)}</div>`:
+    `<div class="lbl">${full?"EVA TIME":"HEART"}</div><div class="big"${full?"":` style="color:${COLORS[stat("hr")]}"`}>${full?`${Math.floor(t/60)}:${String(t%60).padStart(2,"0")}`:Math.round(S.v.hr)}</div>`+
+    (full?`<div class="lbl" style="margin-top:6px">HEART</div><div>${Math.round(S.v.hr)} bpm</div>`:"");
+  $("reticle").style.opacity=lv===0?1:0;
+  let c="";
+  if(lv===1){
+    const w=lvInfo.why.find(x=>x[0]==="hr"||x[0]==="o2");
+    c=`<div class="hcard c1"><div class="t">EASE YOUR PACE</div><div class="s">Workload is high · O₂ margin ${o2Margin()} min · no rush, you have time</div></div>`;
+  }else if(lv===2){
+    c=`<div class="hcard c2"><div class="t">STOP TASK · HOLD POSITION</div><div class="s">Stay clipped in. Breathe slowly.<br>Earth and your EVA partner are notified.</div></div>`;
+  }
+  $("hudCenter").innerHTML=c;
+}
+let capTimer=null;
+function hudCaption(t){if(S.mode!=="eva")return;const c=$("hudCap");c.textContent="VEGA: "+t;c.classList.add("show");clearTimeout(capTimer);capTimer=setTimeout(()=>c.classList.remove("show"),7000);}
+function nextTask(){const T={bp:"blood pressure check",glu:"blood sugar check",checkin:"morning check-in",ex:"exercise"};for(const k in T)if(!S.tasks[k])return T[k];return null;}
+function renderBanner(lvInfo){
+  const rim=$("rim");rim.className="rim"+(S.level?" r"+S.level:"");
+  $("rimDot").className="sd s"+S.level;
+  let txt="",acts="";
+  if(S.level===0){
+    txt=S.mode==="eva"?`All nominal · O₂ ${Math.round(S.eva.o2)} min · EVA ${Math.floor(S.eva.t/60)}:${String(S.eva.t%60).padStart(2,"0")}`:`All nominal${nextTask()?" · next: "+nextTask():" · routine done 🎉"}`;
+  }else if(S.level===1){
+    if(S.mode==="eva"){txt=`Ease your pace · O₂ margin ${o2Margin()} min · you have time`;acts=`<button class="primary" data-a="pace">Slowing down</button>`;}
+    else{const names=lvInfo.why.map(([k])=>IND[k].name.toLowerCase());txt=`Focus: ${names.slice(0,2).join(" & ")} need a little care · nothing urgent`;acts=`<button class="primary" data-a="plan">Plan</button><button data-a="call">Private call</button>`;}
+  }else{
+    txt="STOP TASK · HOLD POSITION · Earth & partner notified";acts=`<button class="primary" data-a="stable">I'm stable</button>`;
+  }
+  if(S.level>0||S.showAll) acts+=`<button class="ghost" data-a="all">${S.showAll?"Focus":"Show all"}</button>`;
+  else acts+=`<button class="ghost" data-a="all">All values</button>`;
+  $("rimText").textContent=txt;$("rimActs").innerHTML=acts;
+  $("rimActs").querySelectorAll("button").forEach(x=>x.onclick=()=>action(x.dataset.a));
+}
+function renderMC(){
+  const E=ENVS[S.env];
+  $("linkTxt").textContent=`${E.name} · signal delay ${E.label}`;
+  const r=S.received;
+  if(!r){$("tel").innerHTML="<tr><td class='muted'>Waiting for first telemetry…</td></tr>";}
+  else{
+    const rows=[["Crew status",["Nominal","Attention","CRITICAL"][r.level],r.level],["Activity",r.mode==="eva"?"EVA":"Habitat",0],
+      ["Heart rate",r.hr+(r.irr?" · IRREG.":" bpm"),r.s.hr],["SpO₂",r.spo2+" %",r.s.spo2]];
+    if(r.mode==="eva")rows.push(["Suit O₂",r.o2+" min",r.s.o2]);
+    if(S.mcFull)rows.push(["Blood pressure",r.bp,r.s.bp],["Blood sugar",r.glu+" mg/dL",r.s.glu],["Temperature",r.temp+" °C",r.s.temp],["Sleep (7-day avg)",r.sleepAvg+" h",r.s.sleep],["Mood (score only)",r.mood+"/5",r.s.mood]);
+    $("tel").innerHTML=rows.map(([a,b,s])=>`<tr><td>${a}</td><td style="color:${COLORS[s||0]}">${b}</td></tr>`).join("");
+  }
+  const age=S.receivedAt?((Date.now()-S.receivedAt)/1000).toFixed(0):"–";
+  $("telAge").textContent=r?`Data age: ${((Date.now()-r.at)/1000).toFixed(0)} s`:"";
+  $("wave").innerHTML=S.inTransit.map(p=>{const f=Math.min(1,(Date.now()-p.sent)/(p.arrive-p.sent));const left=p.dir>0?f*100:(1-f)*100;return `<div class="pkt${p.level===2?" p2":""}" style="left:calc(${left}% - 7px)"></div>`;}).join("");
+}
+function render(){
+  const lvInfo=computeLevel();
+  setLevel(lvInfo);
+  renderTiles(lvInfo);renderBody();renderDetail();renderTasks();renderVisor(lvInfo);renderBanner(lvInfo);renderMC();
+  const chip=$("levelChip");chip.className="levelchip lv"+S.level;chip.textContent=["● All nominal","◐ Attention","⚠ Critical"][S.level];
+  $("armClock").textContent=clock()+" · "+ENVS[S.env].name;
+  document.querySelectorAll("#envSeg button").forEach(b=>b.classList.toggle("on",b.dataset.env===S.env));
+  document.querySelectorAll("#modeSeg button").forEach(b=>b.classList.toggle("on",b.dataset.mode===S.mode));
+  document.querySelectorAll("#scenBar button").forEach(b=>b.classList.toggle("on",b.dataset.s===S.scen));
+}
+
+/* ---------- adaptive level changes ---------- */
+function setLevel(info){
+  const prev=S.level;S.level=info.lv;
+  if(prev===S.level) return;
+  S.showAll=false;
+  if(S.level>prev){
+    if(S.level===2){
+      say("Stop your task and hold position. Clip in. Your heart rhythm looks irregular. I've already notified Earth and your EVA partner. Breathe slowly with me: in for four, out for six.",true,"critical");
+      transmit(2,"CRITICAL: irregular heart rhythm during EVA — auto alert");
+    }else if(S.level===1){
+      const k=info.why[0][0];
+      if(k==="hr"||k==="o2") say(`Your workload is high: heart rate ${Math.round(S.v.hr)}, oxygen margin ${o2Margin()} minutes. You have time. Easing your pace a little will bring the margin back up. I've simplified your visor.`,true,"attention_eva");
+      else if(k==="sleep"||k==="mood") say(`Good morning. Your sleep has been under six hours for several nights and your check-ins are lower this week. That's common on long missions and nothing urgent. I've simplified your view. Would you like a plan for tonight, or a private call with the flight surgeon?`,true,"attention_sleep");
+      else say(`${IND[k].name} needs a little attention. Nothing urgent. I've simplified your view and put the details on your arm panel.`,true);
+      transmit(1,"Attention: "+info.why.map(w=>w[0]==="o2"?"O₂ margin":IND[w[0]].name).join(", "));
+    }
+  }else{
+    if(S.level===0) say("Everything is back in the normal range. I've restored your full view.",false,"normal");
+    else say("Things are improving. Staying in focus mode for now.");
+    transmit(S.level,S.level===0?"Crew status back to nominal":"Status improving");
+  }
+}
+
+/* ---------- link to Earth ---------- */
+function snapshot(level){
+  const avg=a=>(a.reduce((x,y)=>x+y,0)/a.length);
+  return {at:Date.now(),level,mode:S.mode,hr:Math.round(S.v.hr),irr:S.eva.irregular,spo2:Math.round(S.v.spo2),o2:Math.round(S.eva.o2),margin:o2Margin(),
+    bp:`${Math.round(S.v.sys)}/${Math.round(S.v.dia)}`,glu:Math.round(S.v.glu),temp:S.v.temp.toFixed(1),sleepAvg:avg(S.h.sleep.slice(-7)).toFixed(1),mood:S.v.mood,
+    s:{hr:stat("hr"),spo2:stat("spo2"),o2:o2Status(),bp:stat("bp"),glu:stat("glu"),temp:stat("temp"),sleep:stat("sleep"),mood:stat("mood")}};
+}
+function mcLog(text,level){
+  const d=document.createElement("div");d.className="l"+level;d.innerHTML=`<span class="muted">${clock()}</span> ${text}`;
+  $("mclog").prepend(d);while($("mclog").children.length>5)$("mclog").lastChild.remove();
+}
+function transmit(level,text){
+  const snap=snapshot(level);const delay=ENVS[S.env].delay*1000;
+  const p={sent:Date.now(),arrive:Date.now()+delay,level,dir:1};S.inTransit.push(p);
+  setTimeout(()=>{
+    S.inTransit=S.inTransit.filter(x=>x!==p);S.received=snap;S.receivedAt=Date.now();
+    mcLog("⬇ "+text,level);renderMC();
+    let reply=null;
+    if(level===2) reply="Flight surgeon: Copy. We see the irregular rhythm. Stay clipped in, partner is on the way to you. Follow VEGA's breathing. We are reviewing your ECG.";
+    else if(text.startsWith("Full report")) reply="Flight surgeon: Report received, thank you. Everything we see matches your arm panel. Talk at the next private conference.";
+    else if(text.startsWith("Private call")) reply="Flight surgeon: Happy to talk. Private conference booked for your next free slot.";
+    if(reply){
+      mcLog("⬆ "+reply,level);
+      const back={sent:Date.now(),arrive:Date.now()+delay,level,dir:-1};S.inTransit.push(back);
+      setTimeout(()=>{S.inTransit=S.inTransit.filter(x=>x!==back);addMsg("ground","EARTH",reply.replace("Flight surgeon: ",""));speak(reply.replace("Flight surgeon: ","Message from Earth. "));},delay);
+    }
+  },delay);
+  if(S.env==="mars"&&level===2) setTimeout(()=>say("Because of the Mars signal delay, Earth will see this in several minutes. I'll guide you until they reply."),2500);
+}
+
+/* ---------- VEGA voice & chat ---------- */
+function addMsg(cls,who,text){
+  const d=document.createElement("div");d.className="msg "+cls;d.innerHTML=`<b>${who}</b>${text}`;
+  $("chat").appendChild(d);$("chat").scrollTop=1e6;
+}
+/* voice: natural-sounding voice first, soft chime before speaking, speaks only when it matters */
+let VOICES=[],voiceName=null;
+try{voiceName=localStorage.getItem("vegaVoice");}catch(e){}
+function rankVoice(v){const n=v.name;let r=0;
+  if(/natural|neural|online/i.test(n))r+=50; if(/siri|premium|enhanced/i.test(n))r+=40;
+  if(/ava|samantha|aria|jenny|emma|libby|sonia|serena|karen|moira|tessa|google us english|google uk english female|female/i.test(n))r+=30;
+  if(/david|mark|guy|daniel|alex\b|fred|ryan|male/i.test(n)&&!/female/i.test(n))r-=25;
+  if(/en-US/i.test(v.lang))r+=5; if(/compact|espeak|fred|albert|zarvox|whisper|bad news|bells|boing|bubbles|cellos|jester|organ|trinoids/i.test(n))r-=100; return r;}
+function loadVoices(){
+  if(!("speechSynthesis" in window))return;
+  VOICES=speechSynthesis.getVoices().filter(v=>/^en/i.test(v.lang)).sort((a,b)=>rankVoice(b)-rankVoice(a));
+  const sel=$("voiceSel");if(!sel)return;
+  if(!VOICES.length){sel.innerHTML="<option>Default voice</option>";return;}
+  if(!voiceName||!VOICES.some(v=>v.name===voiceName))voiceName=VOICES[0].name;
+  sel.innerHTML=VOICES.map(v=>`<option${v.name===voiceName?" selected":""}>${v.name}</option>`).join("");
+}
+if("speechSynthesis" in window){loadVoices();speechSynthesis.onvoiceschanged=loadVoices;}
+let actx=null;
+function chime(){
+  try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();const t=actx.currentTime;
+    [[523,0],[784,.18]].forEach(([f,d])=>{const o=actx.createOscillator(),g=actx.createGain();o.type="sine";o.frequency.value=f;
+      g.gain.setValueAtTime(0,t+d);g.gain.linearRampToValueAtTime(.04,t+d+.06);g.gain.exponentialRampToValueAtTime(.0001,t+d+.9);
+      o.connect(g);g.connect(actx.destination);o.start(t+d);o.stop(t+d+1);});
+  }catch(e){}
+}
+function speak(text){
+  if(!S.voice||!("speechSynthesis" in window))return;
+  try{speechSynthesis.cancel();chime();
+    const u=new SpeechSynthesisUtterance(text);u.lang="en-US";u.rate=.9;u.pitch=1.1;u.volume=.85;
+    const v=VOICES.find(v=>v.name===voiceName);if(v){u.voice=v;u.lang=v.lang;}
+    setTimeout(()=>speechSynthesis.speak(u),600);}catch(e){}
+}
+/* Recorded human voice clips (audio/<key>.mp3 or .m4a). If a clip exists it is played instead of the synthetic voice. */
+const CLIPS={greet:1,attention_eva:1,attention_sleep:1,critical:1,stable:1,normal:1,pace_ack:1,status_ok:1,checkin_low:1};
+const clipEl={};
+for(const k in CLIPS){const a=new Audio();a.preload="auto";let tried=0;const exts=["mp3","m4a"];
+  a.onerror=()=>{tried++;if(tried<exts.length)a.src=`audio/${k}.${exts[tried]}`;else delete clipEl[k];};
+  a.oncanplaythrough=()=>{clipEl[k]=a;};a.src=`audio/${k}.${exts[0]}`;}
+function playClip(key){
+  if(!S.voice||!key||!clipEl[key])return false;
+  try{speechSynthesis&&speechSynthesis.cancel();Object.values(clipEl).forEach(a=>{a.pause();a.currentTime=0;});
+    chime();const a=clipEl[key];a.volume=.95;setTimeout(()=>{a.play().catch(()=>{});},600);return true;}catch(e){return false;}
+}
+/* say(text, aloud, clipKey): recorded clip if available, else synthetic voice when aloud, else text only */
+function say(text,aloud,key){addMsg("vega","VEGA",text);if(!playClip(key)&&aloud)speak(text);hudCaption(text);}
+function handle(raw){
+  const t=raw.toLowerCase().replace(/^(hey |ok |okay )?(vega|vegas|vaga|bega)[,!.]?\s*/,"").trim();
+  addMsg("user","YOU",raw);
+  const has=(...w)=>w.some(x=>t.includes(x));
+  if(!t){say("I'm listening.",true);return;}
+  if(has("show all","show everything","full view")){action("all");return;}
+  if(has("focus","simplify")){S.showAll=false;say("Focus view on.",true);render();return;}
+  if(has("slow","easing","ease","pace")){action("pace");return;}
+  if(has("i'm stable","i am stable","stable","i'm ok","i am ok")){action("stable");return;}
+  if(has("start eva","start the eva","going outside")){setMode("eva");return;}
+  if(has("end eva","stop eva","back inside","ingress")){setMode("habitat");return;}
+  if(has("send","report","earth","ground","surgeon","doctor")){
+    if(has("call","talk")) action("call"); else action("report");return;}
+  if(has("oxygen","o2")){
+    if(S.mode==="eva") say(`You have ${Math.round(S.eva.o2)} minutes of oxygen, with a ${o2Margin()} minute margin over your planned task time. Blood oxygen is ${Math.round(S.v.spo2)} percent.`,true);
+    else say(`Your blood oxygen is ${Math.round(S.v.spo2)} percent. ${["That's normal.","Slightly low — check the cabin air reading and rest.","Low — please stop and recheck now."][stat("spo2")]}`,true);return;}
+  if(has("heart","pulse")){say(`Your heart rate is ${Math.round(S.v.hr)} beats per minute${S.eva.irregular?", and the rhythm is irregular":""}. ${["That's in your normal range.","A little high for what you're doing.","Please stop and hold position."][stat("hr")]}`,true);S.sel="heart";S.selInd="hr";render();return;}
+  if(has("pressure")){say(`Your last blood pressure was ${Math.round(S.v.sys)} over ${Math.round(S.v.dia)}. ${["Normal.","Slightly elevated — let's recheck after five minutes of rest.","High — please recheck now; I'll inform the crew medical officer."][stat("bp")]}`,true);S.sel="heart";S.selInd="bp";render();return;}
+  if(has("sugar","glucose")){say(`Your blood sugar was ${Math.round(S.v.glu)} milligrams per deciliter. ${["That's normal.","Slightly outside range; I'll remind you to recheck after your next meal.","Outside the safe range — follow the steps on your arm panel."][stat("glu")]}`,true);S.sel="metab";S.selInd="glu";render();return;}
+  if(has("temperature","fever","hot","cold")){say(`Your temperature is ${S.v.temp.toFixed(1)} degrees. ${["Normal.","Slightly off — rest and drink fluids; I'll check again in two hours.","High — please rest and inform the crew medical officer."][stat("temp")]}`,true);S.sel="immune";S.selInd="temp";render();return;}
+  if(has("sleep","slept")){const a=S.h.sleep.slice(-3);say(`You slept ${S.v.sleep.toFixed(1)} hours last night; the last three nights average ${(a.reduce((x,y)=>x+y,0)/3).toFixed(1)}. ${stat("sleep")?"Tonight I can dim the cabin lights earlier and keep your morning free of demanding tasks. Just say yes.":"That's good."}`,true);S.sel="brain";S.selInd="sleep";render();return;}
+  if(has("yes","sure","please do","sounds good")){say("Done. Lights will dim an hour earlier tonight and I've asked ground to move your first task by one hour.",true);S.tasks.checkin=true;render();return;}
+  const low=has("tired","stressed","anxious","sad","lonely","bad","not great","exhausted","homesick","down");
+  const good=has("good","great","fine","happy","well","okay","ok");
+  if(low||good){
+    const score=low?(has("lonely","homesick","sad","down")?2:3):(has("great","happy")?5:4);
+    S.v.mood=score;S.h.mood[S.h.mood.length-1]=score;S.tasks.checkin=true;
+    if(low) say(`Thank you for telling me. I've logged your mood as ${score} out of 5 — only the number is shared with Earth. ${has("lonely","homesick")?"Would a call home tonight help? I can find a slot.":"A short break or 20 minutes on the bike often helps. Want me to move your next task?"}`,tru,has("lonely","homesick")?"checkin_low":null);
+    else say(`Glad to hear it. Logged ${score} out of 5. Your check-in is done.`,true);
+    render();return;}
+  if(has("status","how am i","how am i doing","overview","summary")){
+    const L=computeLevel();
+    if(L.lv===0) say(`All your indicators are in range. Heart ${Math.round(S.v.hr)}, oxygen ${Math.round(S.v.spo2)} percent${S.mode==="eva"?`, suit oxygen ${Math.round(S.eva.o2)} minutes`:""}. You're doing well.`,true,"status_ok");
+    else say(`Mostly fine. Worth attention: ${L.why.map(w=>w[0]==="o2"?"oxygen margin":IND[w[0]].name.toLowerCase()).join(", ")}. Details are on your arm panel.`,true);
+    return;}
+  if(has("help","what can you")){say("You can ask me about your heart, blood pressure, sugar, temperature, sleep or oxygen. Tell me how you feel, ask for a status, say show all, or ask me to send a report to Earth.",true);return;}
+  say("I didn't catch that. You can ask about your heart, oxygen, sleep, or say status.",true);
+}
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+let rec=null,wakeOn=false;
+function listen(continuous){
+  if(!SR){say("Voice input isn't supported in this browser. You can type to me instead — try Chrome for voice.");return false;}
+  try{rec&&rec.abort();}catch(e){}
+  rec=new SR();rec.lang="en-US";rec.continuous=continuous;rec.interimResults=false;
+  rec.onresult=e=>{
+    const tr=e.results[e.results.length-1][0].transcript.trim();
+    if(continuous){ if(!/\b(vega|vegas|vaga|bega)\b/i.test(tr)) return; }
+    handle(tr);
+  };
+  rec.onerror=e=>{if(e.error==="not-allowed"){say("I need microphone permission to hear you. You can still type.");wakeOn=false;updMic();}};
+  rec.onend=()=>{if(continuous&&wakeOn){try{rec.start();}catch(e){}}else{$("micBtn").classList.remove("on");}};
+  try{rec.start();}catch(e){return false;}
+  return true;
+}
+function updMic(){$("wakeBtn").classList.toggle("on",wakeOn);$("wakeBtn").textContent=wakeOn?"“Vega…” listening":"“Vega…” off";}
+
+/* ---------- actions ---------- */
+function action(a){
+  if(a==="all"){S.showAll=!S.showAll;if(S.level>0)say(S.showAll?"Showing everything. Say 'focus' to simplify again.":"Back to focus view.");render();return;}
+  if(a==="pace"){
+    if(S.mode!=="eva"){say("You're inside the habitat — no pace change needed.");return;}
+    S.eva.targetHr=112;S.eva.burn=1.0;say("Thank you. Pace eased. I'll tell you when your margin is back to normal.",false,"pace_ack");render();return;}
+  if(a==="stable"){
+    if(!S.eva.irregular&&S.level<2){say("Noted. You're stable.");return;}
+    S.eva.irregular=false;S.eva.targetHr=98;S.eva.burn=1.0;S.v.spo2=96;say("Thank you. Your rhythm is settling. Stay clipped in — Earth will advise whether to continue or return.",false,"stable");render();return;}
+  if(a==="plan"){say("Here's a gentle plan: tonight, lights dim an hour earlier and no screens after 21:00. Tomorrow morning, 30 minutes on the bike before work, and a call home in the evening. Shall I set it up?");return;}
+  if(a==="call"){say("I've requested a private conference with the flight surgeon. Only you and them will be on the call.");transmit(S.level,"Private call requested by crew member");return;}
+  if(a==="report"){say("Sending a full health report to Earth now.");transmit(S.level,"Full report sent by crew member");return;}
+}
+
+/* ---------- scenarios ---------- */
+function setMode(m){
+  S.mode=m;
+  if(m==="eva"){S.eva.t=0;S.eva.o2=360;S.eva.planned=240;S.live=[S.v.hr];say("EVA mode. Your visor now shows only what matters. Details stay on your arm. Have a good walk.");}
+  else{S.eva.irregular=false;S.eva.burn=1;S.eva.targetHr=108;S.v.hr=S.h.hr[S.h.hr.length-1];S.v.spo2=S.h.spo2[S.h.spo2.length-1];say("Welcome back inside. Visor HUD is idle.");}
+  render();
+}
+function scenario(s){
+  S.scen=s;loadBase();S.eva.irregular=false;S.eva.burn=1;S.eva.targetHr=108;S.showAll=false;
+  S.tasks={checkin:false,bp:false,glu:false,ex:false,vision:true};
+  const silentLevel=()=>{S.level=computeLevel().lv;};
+  if(s==="nominal"){S.mode="habitat";silentLevel();render();say("Good morning. Everything looks normal today. Your morning check-in is ready when you are.");}
+  if(s==="isolation"){
+    S.mode="habitat";
+    S.h.sleep=[7.1,6.8,6.2,5.9,5.6,5.4,5.3];S.h.mood=[4,4,3,3,3,2,3];S.h.hr=[64,66,68,70,71,73,74];
+    S.v.sleep=5.3;S.v.mood=3;S.v.hr=74;S.level=0;render();
+  }
+  if(s==="evawork"){
+    S.mode="eva";S.level=0;S.eva.t=40;S.eva.o2=320;S.eva.planned=200;S.v.hr=112;S.live=[104,106,108,110,112];
+    S.eva.targetHr=142;S.eva.burn=1.3;render();say("EVA in progress. Task: replace pump module on the truss.");
+  }
+  if(s==="evacrit"){
+    S.mode="eva";S.level=0;S.eva.t=95;S.eva.o2=250;S.eva.planned=150;S.v.hr=128;S.live=[118,120,122,125,128];
+    S.eva.targetHr=158;S.eva.burn=1.25;render();
+    setTimeout(()=>{S.eva.irregular=true;S.v.spo2=92;},3000);
+  }
+}
+
+/* ---------- live simulation ---------- */
+setInterval(()=>{
+  if(S.mode==="eva"){
+    S.eva.t+=1;S.eva.o2=Math.max(0,S.eva.o2-S.eva.burn);S.eva.planned=Math.max(0,S.eva.planned-1);
+    const noise=(Math.random()-.5)*(S.eva.irregular?14:3);
+    S.v.hr=S.v.hr+(S.eva.targetHr-S.v.hr)*0.12+noise;
+    if(!S.eva.irregular) S.v.spo2=Math.min(99,S.v.spo2+(97-S.v.spo2)*0.1);
+    S.live.push(Math.round(S.v.hr));if(S.live.length>60)S.live.shift();
+    if(S.eva.t%8===0) transmit(S.level,"Telemetry");
+    render();
+  }else{ renderMC(); }
+},1000);
+setInterval(()=>{if(S.inTransit.length)renderMC();},120);
+setInterval(()=>{if(S.mode!=="eva")transmit(S.level,"Telemetry");},10000);
+
+/* ---------- wiring ---------- */
+document.querySelectorAll("#envSeg button").forEach(b=>b.onclick=()=>{S.env=b.dataset.env;render();say(`Environment: ${ENVS[S.env].name}. Signal delay to Earth is ${ENVS[S.env].label.replace("(demo: compressed to 8 s)","")}.`);});
+document.querySelectorAll("#modeSeg button").forEach(b=>b.onclick=()=>{if(b.dataset.mode!==S.mode)setMode(b.dataset.mode);});
+document.querySelectorAll("#scenBar button").forEach(b=>b.onclick=()=>scenario(b.dataset.s));
+$("startEva").onclick=()=>setMode("eva");
+$("sendReport").onclick=()=>action("report");
+$("telMore").onclick=()=>{S.mcFull=!S.mcFull;$("telMore").textContent=S.mcFull?"Less ▴":"Full telemetry ▾";renderMC();};
+document.querySelectorAll("#tabs button").forEach(b=>b.onclick=()=>openTab(b.dataset.tab));
+$("chatSend").onclick=()=>{const v=$("chatIn").value.trim();if(v){handle(v);$("chatIn").value="";}};
+$("chatIn").onkeydown=e=>{if(e.key==="Enter")$("chatSend").click();};
+$("micBtn").onclick=()=>{wakeOn=false;updMic();if(listen(false))$("micBtn").classList.add("on");};
+$("wakeBtn").onclick=()=>{wakeOn=!wakeOn;updMic();if(wakeOn){if(!listen(true)){wakeOn=false;updMic();}else say("I'll listen for my name. Say 'Vega' and then your question.");}else{try{rec&&rec.abort();}catch(e){}}};
+$("voiceSel").onchange=e=>{voiceName=e.target.value;try{localStorage.setItem("vegaVoice",voiceName)}catch(_){}};
+$("voiceTest").onclick=()=>{const was=S.voice;S.voice=true;if(!playClip("greet"))speak("Hi, I'm Vega. I'll keep you posted, calmly and only when it matters.");S.voice=was;};
+$("muteBtn").onclick=()=>{S.voice=!S.voice;$("muteBtn").textContent=S.voice?"🔊":"🔇";if(!S.voice)try{speechSynthesis.cancel()}catch(e){}};
+// manual logging
+const LOGS={hr:["Heart rate","bpm"],bp:["Blood pressure","sys"],glu:["Blood sugar","mg/dL"],temp:["Temperature","°C"],sleep:["Sleep","hours"],mood:["Mood","1–5"],spo2:["Blood oxygen","%"]};
+$("logInd").innerHTML=Object.entries(LOGS).map(([k,[n]])=>`<option value="${k}">${n}</option>`).join("");
+function updLogUI(){const k=$("logInd").value;$("logVal").placeholder=LOGS[k][1];$("logVal2").classList.toggle("hidden",k!=="bp");$("logHint").textContent="How: "+IND[k].how;}
+$("logInd").onchange=updLogUI;
+$("logBtn").onclick=()=>{
+  const k=$("logInd").value,v=parseFloat($("logVal").value);if(isNaN(v))return;
+  if(k==="bp"){const d=parseFloat($("logVal2").value);if(isNaN(d))return;S.v.sys=v;S.v.dia=d;S.h.sys.push(v);S.h.dia.push(d);S.tasks.bp=true;}
+  else{S.v[k]=v;S.h[k].push(v);if(k==="glu")S.tasks.glu=true;if(k==="mood"||k==="sleep")S.tasks.checkin=true;}
+  for(const a in S.h) if(S.h[a].length>14) S.h[a].shift();
+  $("logVal").value="";$("logVal2").value="";
+  S.sel=regionOf(k);S.selInd=k;
+  const s=stat(k);
+  say(`Logged ${IND[k].name.toLowerCase()}: ${fmt(k,S.v[k])} ${IND[k].unit}. ${["That's in the normal range.","Slightly outside the normal range. "+IND[k].act,"Outside the safe range. "+IND[k].act+" I'm informing Earth."][s]}`);
+  render();
+};
+loadBase();updLogUI();render();
+setTimeout(()=>addMsg("vega","VEGA","Hi, I'm VEGA. Ask me anything about your health — say “Vega” and your question, or type below."),300);
+</script>
+</body>
+</html>
