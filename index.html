@@ -329,7 +329,7 @@ main{grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) 250px!important}
 
 <footer>
   <b>About this prototype.</b> VEGA is a NASA Space Apps Challenge 2026 concept for the astronaut health self-assessment challenge. All health values are <b>simulated</b>; thresholds are illustrative and this is not a medical device.<br>
-  <b>NASA resources.</b> Indicator choice and the “hazard” tags on every body region follow NASA's Human Research Program and its five hazards of human spaceflight (space radiation, isolation &amp; confinement, distance from Earth, gravity fields, hostile closed environments): <a href="https://www.nasa.gov/hrp/hazards" target="_blank" rel="noopener">nasa.gov/hrp/hazards</a>. Communication delays per environment are based on HRP's “distance from Earth” hazard (Mars: up to ~20 min one way; compressed in this demo).<br>
+  <b>NASA resources.</b> Indicator choice and the “hazard” tags on every body region follow NASA's Human Research Program and its five hazards of human spaceflight (space radiation, isolation &amp; confinement, distance from Earth, gravity fields, hostile closed environments): <a href="https://www.nasa.gov/hrp/hazards" target="_blank" rel="noopener">nasa.gov/hrp/hazards</a>. Communication delays per environment are based on HRP's “distance from Earth” hazard (Mars: up to ~20 min one way; compressed in this demo).<br><b>Evidence used in the thresholds and explanations.</b> Bone loss 1–1.5 %/month on 4–6-month missions: <a href="https://www.nasa.gov/reference/risk-of-spaceflight-induced-bone-changes/" target="_blank" rel="noopener">NASA HRP – Risk of Spaceflight-Induced Bone Changes</a>. Astronaut sleep (just over 6 h/night on ISS vs 8.5 h scheduled): Barger et al., <i>Lancet Neurology</i> 2014, NASA/NSBRI-funded (<a href="https://www.eurekalert.org/news-releases/541449" target="_blank" rel="noopener">summary</a>). Vision changes on long missions: <a href="https://www.nasa.gov/feature/nasa-s-human-research-program-trailblazing-better-ways-to-protect-astronauts/" target="_blank" rel="noopener">NASA HRP</a>. Future work: calibrate personal baselines with astronaut physiological data from the <a href="https://osdr.nasa.gov/bio/repo" target="_blank" rel="noopener">NASA Open Science Data Repository</a>.<br>
   <b>SI disclosure.</b> The code of this prototype was written with the help of an AI model (Claude, Anthropic). The concept and interaction design — visor HUD, arm panel, voice assistant VEGA, adaptive low-stress interface and the link to Earth — are by the team. Voice uses the browser's built-in Web Speech API (works best in Chrome).
 </footer>
 
@@ -396,14 +396,17 @@ const REGIONS={
     txt:"Your sleep and mood tell VEGA how you are coping with a long mission."},
   eyes:{name:"Eyes",inds:[],hz:"Gravity fields",
     txt:"Fluids shift toward the head in weightlessness. Some long-duration astronauts develop changes in near vision (Spaceflight-Associated Neuro-ocular Syndrome).",
-    extra:"Weekly near-vision card check · last result: <b>no change</b>. Onboard eye imaging is guided by ground."},
+    extra:"Weekly near-vision card check · last result: <b>no change</b>. Onboard eye imaging is guided by ground. NASA reports that some long-duration astronauts see near-vision changes that do not fully resolve after landing."},
   heart:{name:"Heart & circulation",inds:["hr","bp"],hz:"Gravity fields · Space radiation",txt:"The heart works differently without gravity, and adapts back slowly."},
   lungs:{name:"Lungs & breathing",inds:["spo2"],hz:"Hostile closed environment",txt:"Air in a spacecraft or suit is recycled; small problems in it show up in your blood oxygen."},
   metab:{name:"Metabolism & nutrition",inds:["glu"],hz:"Hostile closed environment",txt:"Diet, stress and activity all shape blood sugar on a long mission."},
-  bones:{name:"Bones & muscle",inds:["ex"],hz:"Gravity fields",txt:"Bones and muscles need load. Exercise minutes are the best daily indicator you control."},
+  bones:{name:"Bones & muscle",inds:["ex"],hz:"Gravity fields",txt:"Bones and muscles need load. Exercise minutes are the best daily indicator you control.",
+    extra:"Mission day <b>94</b>. Without exercise, NASA's average of 1–1.5 %/month would mean roughly <b>3–4.5 %</b> bone density lost by now. Keeping your daily exercise up is how you protect it."},
   immune:{name:"Skin & immune system",inds:["temp"],hz:"Space radiation · Hostile closed environment",txt:"Stress and spaceflight can weaken immune defenses; temperature is the quickest signal."}
 };
 const COLORS=["#4fd1b5","#e8b45a","#ff6f6f"];
+const EVIDENCE={"sleep": {"t": "ISS crews averaged just over 6 h of sleep per night although 8.5 h is scheduled; only about 1 in 4 ISS sleep episodes reached 7 h (NASA-funded study, Barger et al., Lancet Neurology 2014).", "u": "https://www.eurekalert.org/news-releases/541449"}, "ex": {"t": "NASA HRP: on 4\u20136-month missions bones lose on average 1\u20131.5 % of their density per month; exercise is an essential countermeasure.", "u": "https://www.nasa.gov/reference/risk-of-spaceflight-induced-bone-changes/"}, "mood": {"t": "NASA HRP lists isolation & confinement as one of the five hazards of human spaceflight; lighting, movement and sleep help crews stay mentally healthy.", "u": "https://www.nasa.gov/hrp/hazards"}};
+const MISSION_DAY=94;
 
 /* ---------- state ---------- */
 const S={env:"iss",mode:"habitat",scen:"nominal",showAll:false,voice:true,sel:"heart",selInd:"hr",level:0,
@@ -521,7 +524,7 @@ function renderDetail(){
     h+=`<div style="display:flex;align-items:baseline;gap:8px;margin-top:10px"><span class="sd s${s}"></span><b style="font-size:18px">${fmt(k,S.v[k])} ${c.unit}</b><span class="small muted">${S.mode==="eva"&&k==="hr"?"live · last minutes of EVA":"last 7 days"} · <span style="color:#5f8f84">shaded = normal range</span></span></div>`;
     h+=chart(series(k).slice(-60),c.band(),300,70,COLORS[s],{labels:true});
     h+=`<div class="small" style="margin-top:6px;color:${COLORS[s]}">${prediction(k)}</div>`;
-    h+=`<dl><dt>Why in space</dt><dd>${c.why}</dd><dt>How to measure</dt><dd>${c.how}</dd><dt>Tell Earth when</dt><dd>${c.when}</dd><dt>What helps</dt><dd>${c.act}</dd></dl>`;
+    h+=`<dl><dt>Why in space</dt><dd>${c.why}</dd><dt>How to measure</dt><dd>${c.how}</dd><dt>Tell Earth when</dt><dd>${c.when}</dd><dt>What helps</dt><dd>${c.act}</dd>${EVIDENCE[k]?`<dt>NASA evidence</dt><dd>${EVIDENCE[k].t} <a href="${EVIDENCE[k].u}" target="_blank" rel="noopener" style="color:var(--accent)">Source ↗</a></dd>`:""}</dl>`;
   }
   $("detail").innerHTML=h;
   $("detail").querySelectorAll("[data-ind]").forEach(b=>b.onclick=()=>{S.selInd=b.dataset.ind;render();});
@@ -598,7 +601,7 @@ function render(){
   setLevel(lvInfo);
   renderTiles(lvInfo);renderBody();renderDetail();renderTasks();renderVisor(lvInfo);renderBanner(lvInfo);renderMC();
   const chip=$("levelChip");chip.className="levelchip lv"+S.level;chip.textContent=["● All nominal","◐ Attention","⚠ Critical"][S.level];
-  $("armClock").textContent=clock()+" · "+ENVS[S.env].name;
+  $("armClock").textContent="Mission day "+MISSION_DAY+" · "+clock()+" · "+ENVS[S.env].name;
   document.querySelectorAll("#envSeg button").forEach(b=>b.classList.toggle("on",b.dataset.env===S.env));
   document.querySelectorAll("#modeSeg button").forEach(b=>b.classList.toggle("on",b.dataset.mode===S.mode));
   document.querySelectorAll("#scenBar button").forEach(b=>b.classList.toggle("on",b.dataset.s===S.scen));
@@ -616,7 +619,7 @@ function setLevel(info){
     }else if(S.level===1){
       const k=info.why[0][0];
       if(k==="hr"||k==="o2") say(`Your workload is high: heart rate ${Math.round(S.v.hr)}, oxygen margin ${o2Margin()} minutes. You have time. Easing your pace a little will bring the margin back up. I've simplified your visor.`,true,"attention_eva");
-      else if(k==="sleep"||k==="mood") say(`Good morning. Your sleep has been under six hours for several nights and your check-ins are lower this week. That's common on long missions and nothing urgent. I've simplified your view. Would you like a plan for tonight, or a private call with the flight surgeon?`,true,"attention_sleep");
+      else if(k==="sleep"||k==="mood") say(`Good morning. Your sleep has been under six hours for several nights and your check-ins are lower this week. That's common on long missions: ISS crews average just over six hours. Nothing urgent. I've simplified your view. Would you like a plan for tonight, or a private call with the flight surgeon?`,true,"attention_sleep");
       else say(`${IND[k].name} needs a little attention. Nothing urgent. I've simplified your view and put the details on your arm panel.`,true);
       transmit(1,"Attention: "+info.why.map(w=>w[0]==="o2"?"O₂ margin":IND[w[0]].name).join(", "));
     }
